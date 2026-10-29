@@ -15,7 +15,7 @@ You describe your data once in [DBML](https://dbml.dbdiagram.io/docs/); Icebolt 
 ```bash
 npm create vite@latest my-app -- --template vanilla-ts   # skip if you already have an app
 cd my-app
-npm install @icebolt/compiler-core sql.js
+npm install nivlahkicebolt sql.js
 npx icebolt init
 npx icebolt setup google
 npm run dev
@@ -75,13 +75,13 @@ icebolt --help                     All options
 
 | Import | Contents |
 |---|---|
-| `@icebolt/compiler-core` | Everything below, plus `compileSchema` and `generateClientSource` |
-| `@icebolt/compiler-core/app` | `createIceboltApp`: the complete Connect / Storage experience |
-| `@icebolt/compiler-core/runtime` | Typed client, SQLite drivers (sql.js, @sqlite.org/sqlite-wasm), schema upgrades |
-| `@icebolt/compiler-core/ui` | Forms, action buttons, storage settings panel |
-| `@icebolt/compiler-core/sync` | `GoogleDriveSyncManager`, encryption, readable exports |
-| `@icebolt/compiler-core/auth` | Google sign-in (browser token flow, no server) |
-| `@icebolt/compiler-core/cli` | `init`, `compileProject`, `setupGoogle` as functions |
+| `nivlahkicebolt` | Everything below, plus `compileSchema` and `generateClientSource` |
+| `nivlahkicebolt/app` | `createIceboltApp`: the complete Connect / Storage experience |
+| `nivlahkicebolt/runtime` | Typed client, SQLite drivers (sql.js, @sqlite.org/sqlite-wasm), schema upgrades |
+| `nivlahkicebolt/ui` | Forms, action buttons, storage settings panel |
+| `nivlahkicebolt/sync` | `GoogleDriveSyncManager`, encryption, readable exports |
+| `nivlahkicebolt/auth` | Google sign-in (browser token flow, no server) |
+| `nivlahkicebolt/cli` | `init`, `compileProject`, `setupGoogle` as functions |
 
 ## Developing Icebolt
 

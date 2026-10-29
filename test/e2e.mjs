@@ -1,4 +1,4 @@
-// End-to-end verification for @icebolt/compiler-core (runs against dist/).
+// End-to-end verification for nivlahkicebolt (runs against dist/).
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -1386,7 +1386,7 @@ await test('icebolt init: Vite starter becomes a working Icebolt app, idempotent
   const dir = mkdtempSync(join(tmpdir(), 'icebolt-init-'));
   wf(join(dir, 'package.json'), JSON.stringify({ name: 'pocket-notes', private: true, type: 'module',
     scripts: { dev: 'vite', build: 'tsc && vite build', preview: 'vite preview' },
-    dependencies: { '@icebolt/compiler-core': '^1.0.0', 'sql.js': '^1.11.0' }, devDependencies: { typescript: '~5.6.2', vite: '^5.4.0' } }, null, 2));
+    dependencies: { 'nivlahkicebolt': '^1.0.0', 'sql.js': '^1.11.0' }, devDependencies: { typescript: '~5.6.2', vite: '^5.4.0' } }, null, 2));
   wf(join(dir, 'tsconfig.json'), '{}');
   wf(join(dir, '.gitignore'), 'node_modules\ndist\n');
   md(join(dir, 'src'));
@@ -1422,7 +1422,7 @@ await test('icebolt init: Vite starter becomes a working Icebolt app, idempotent
   const d2 = mkdtempSync(join(tmpdir(), 'icebolt-init2-'));
   wf(join(d2, 'package.json'), JSON.stringify({ name: 'x', scripts: { prebuild: 'eslint .' } }));
   const out2 = execFileSync('node', [bin, 'init', '--app-name', 'Field Log'], { cwd: d2, encoding: 'utf8' });
-  assert.match(out2, /npm install @icebolt\/compiler-core sql\.js/);
+  assert.match(out2, /npm install nivlahkicebolt sql\.js/);
   assert.match(out2, /Not a Vite project/);
   assert.equal(JSON.parse(rf(join(d2, 'package.json'), 'utf8')).scripts.prebuild, 'npm run icebolt:compile && eslint .');
   assert.ok(ex(join(d2, 'src/icebolt.js')));

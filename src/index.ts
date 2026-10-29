@@ -1,5 +1,5 @@
 /**
- * @icebolt/compiler-core
+ * nivlahkicebolt
  *
  *   DBML ──compileSchema──▶ { sqlMigration, uiManifest, schema }
  *                │

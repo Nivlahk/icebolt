@@ -4,16 +4,16 @@
     "noEmit": true,
     "rootDir": "..",
     "paths": {
-      "@icebolt/compiler-core/runtime": [
+      "nivlahkicebolt/runtime": [
         "../src/runtime/index.ts"
       ],
-      "@icebolt/compiler-core/sync": [
+      "nivlahkicebolt/sync": [
         "../src/sync/index.ts"
       ],
-      "@icebolt/compiler-core/auth": [
+      "nivlahkicebolt/auth": [
         "../src/auth/index.ts"
       ],
-      "@icebolt/compiler-core/ui": [
+      "nivlahkicebolt/ui": [
         "../src/ui/index.ts"
       ]
     }

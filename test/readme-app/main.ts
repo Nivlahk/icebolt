@@ -1,10 +1,10 @@
 // Verbatim from docs/sync-and-storage.md ("Wiring it by hand"); type-checked by npm test.
 import initSqlJs from 'sql.js';
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
-import { createSqlJsDriver } from '@icebolt/compiler-core/runtime';
-import { GoogleDriveSyncManager, IceboltSyncError, bindAutoSync, readStorageSettings, writeStorageSettings } from '@icebolt/compiler-core/sync';
-import { GoogleDriveAuth, linkAuthToSync, renderDriveConnectButton } from '@icebolt/compiler-core/auth';
-import { renderStorageSettings } from '@icebolt/compiler-core/ui';
+import { createSqlJsDriver } from 'nivlahkicebolt/runtime';
+import { GoogleDriveSyncManager, IceboltSyncError, bindAutoSync, readStorageSettings, writeStorageSettings } from 'nivlahkicebolt/sync';
+import { GoogleDriveAuth, linkAuthToSync, renderDriveConnectButton } from 'nivlahkicebolt/auth';
+import { renderStorageSettings } from 'nivlahkicebolt/ui';
 import { openIceboltClient, schemaMeta } from './db/icebolt-client';
 
 const auth = new GoogleDriveAuth({ clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID }); // loads Google's script now

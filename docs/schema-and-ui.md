@@ -67,8 +67,8 @@ Props are read by a strict literal parser; nothing is evaluated. Bad targets, un
 Render them:
 
 ```ts
-import { renderForm, renderActionButtons } from '@icebolt/compiler-core/ui';
-import { executeAction } from '@icebolt/compiler-core/runtime';
+import { renderForm, renderActionButtons } from 'nivlahkicebolt/ui';
+import { executeAction } from 'nivlahkicebolt/runtime';
 import { UI_MANIFEST } from './db/icebolt-client';
 
 const ui = UI_MANIFEST.tables['tasks']!;
@@ -98,7 +98,7 @@ Without the app shell, open a database yourself:
 
 ```ts
 import initSqlJs from 'sql.js';
-import { createSqlJsDriver } from '@icebolt/compiler-core/runtime';
+import { createSqlJsDriver } from 'nivlahkicebolt/runtime';
 import { openIceboltClient } from './db/icebolt-client';
 
 const SQL = await initSqlJs();
@@ -110,7 +110,7 @@ const db = openIceboltClient(createSqlJsDriver(new SQL.Database()));
 ## Using the compiler directly
 
 ```ts
-import { compileSchema, generateClientSource } from '@icebolt/compiler-core';
+import { compileSchema, generateClientSource } from 'nivlahkicebolt';
 
 const result = compileSchema(dbmlText); // throws IceboltCompileError listing every problem
 result.sqlMigration;  // CREATE script

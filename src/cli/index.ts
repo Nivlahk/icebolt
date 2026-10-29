@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * icebolt — developer CLI for @icebolt/compiler-core.
+ * icebolt — developer CLI for nivlahkicebolt.
  *
  *   icebolt init [--app-name NAME] [--no-demo]
  *   icebolt compile SCHEMA.dbml [--out DIR] [--allow-drop TABLE[.COLUMN]]...

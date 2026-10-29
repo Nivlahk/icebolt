@@ -1,5 +1,5 @@
 {
-  "name": "@icebolt/compiler-core",
+  "name": "nivlahkicebolt",
   "version": "1.0.0",
   "description": "Let your users own their data: a schema-first SQLite (Wasm) database that saves to each user's own Google Drive, encrypted with their passphrase. DBML compiler, typed client, schema-driven UI, migrations, and a one-command Google setup.",
   "keywords": [
@@ -31,7 +31,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "icebolt": "./dist/cli/index.js"
+    "icebolt": "dist/cli/index.js"
   },
   "exports": {
     ".": {

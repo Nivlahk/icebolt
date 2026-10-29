@@ -10,10 +10,10 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": false,
     "paths": {
-      "@icebolt/compiler-core/runtime": ["../src/runtime/index.ts"],
-      "@icebolt/compiler-core/sync": ["../src/sync/index.ts"],
-      "@icebolt/compiler-core/auth": ["../src/auth/index.ts"],
-      "@icebolt/compiler-core/ui": ["../src/ui/index.ts"]
+      "nivlahkicebolt/runtime": ["../src/runtime/index.ts"],
+      "nivlahkicebolt/sync": ["../src/sync/index.ts"],
+      "nivlahkicebolt/auth": ["../src/auth/index.ts"],
+      "nivlahkicebolt/ui": ["../src/ui/index.ts"]
     }
   },
   "include": ["readme-app/**/*.ts"]

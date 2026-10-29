@@ -1,5 +1,5 @@
 import { openIceboltClient, type TasksRow } from './icebolt-client.js';
-import { createSqlJsDriver } from '@icebolt/compiler-core/runtime';
+import { createSqlJsDriver } from 'nivlahkicebolt/runtime';
 declare const db: Parameters<typeof createSqlJsDriver>[0];
 
 const client = openIceboltClient(createSqlJsDriver(db));

@@ -71,7 +71,7 @@ function wiringTemplate(appId: string, appName: string, ts: boolean, vite: boole
   return `// Icebolt wiring: your users' data lives in their own Google Drive, never on your servers.
 // Written by \`icebolt init\`; edit freely.
 ${sqlite}
-import { createIceboltApp } from '@icebolt/compiler-core/app';
+import { createIceboltApp } from 'nivlahkicebolt/app';
 import { openIceboltClient, schemaMeta } from './db/icebolt-client';
 ${ts ? `\nexport type AppDb = ReturnType<typeof openIceboltClient>;\n` : ''}
 /**
@@ -97,15 +97,15 @@ export function startIcebolt(mount${ts ? ': HTMLElement' : ''}, onReady${ts ? ':
 const SQLJS_TYPES = `// Types for sql.js as Icebolt uses it (written by \`icebolt init\`).
 // Delete this file if you install @types/sql.js.
 declare module 'sql.js' {
-  import type { SqlJsInit } from '@icebolt/compiler-core/app';
+  import type { SqlJsInit } from 'nivlahkicebolt/app';
   const initSqlJs: SqlJsInit;
   export default initSqlJs;
 }
 `;
 
 function demoTemplate(appName: string, hasStyle: boolean): string {
-  return `${hasStyle ? "import './style.css';\n" : ''}import { renderActionButtons, renderForm } from '@icebolt/compiler-core/ui';
-import { executeAction } from '@icebolt/compiler-core/runtime';
+  return `${hasStyle ? "import './style.css';\n" : ''}import { renderActionButtons, renderForm } from 'nivlahkicebolt/ui';
+import { executeAction } from 'nivlahkicebolt/runtime';
 import { UI_MANIFEST } from './db/icebolt-client';
 import { startIcebolt, type AppDb } from './icebolt';
 
@@ -196,7 +196,7 @@ export function init(opts: InitOptions, log: (line?: string) => void = () => und
   const res: InitResult = { appName, appId, created: [], updated: [], kept: [], missingDeps: [], demo: false, vite, typescript };
   const rel = (p: string): string => relative(cwd, p);
 
-  for (const d of ['@icebolt/compiler-core', 'sql.js']) if (!(d in deps)) res.missingDeps.push(d);
+  for (const d of ['nivlahkicebolt', 'sql.js']) if (!(d in deps)) res.missingDeps.push(d);
 
   const writeNew = (path: string, content: string): void => {
     if (existsSync(path)) {
