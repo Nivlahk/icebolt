@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": false,
+    "paths": {
+      "@icebolt/compiler-core/runtime": ["../src/runtime/index.ts"],
+      "@icebolt/compiler-core/sync": ["../src/sync/index.ts"],
+      "@icebolt/compiler-core/auth": ["../src/auth/index.ts"],
+      "@icebolt/compiler-core/ui": ["../src/ui/index.ts"]
+    }
+  },
+  "include": ["readme-app/**/*.ts"]
+}

@@ -1,0 +1,98 @@
+{
+  "name": "@icebolt/compiler-core",
+  "version": "1.0.0",
+  "description": "Let your users own their data: a schema-first SQLite (Wasm) database that saves to each user's own Google Drive, encrypted with their passphrase. DBML compiler, typed client, schema-driven UI, migrations, and a one-command Google setup.",
+  "keywords": [
+    "sqlite",
+    "wasm",
+    "sql.js",
+    "dbml",
+    "local-first",
+    "google-drive",
+    "end-to-end-encryption",
+    "zero-knowledge",
+    "user-owned-data",
+    "schema",
+    "migrations",
+    "codegen"
+  ],
+  "homepage": "https://github.com/Nivlahk/icebolt#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nivlahk/icebolt.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Nivlahk/icebolt/issues"
+  },
+  "author": "Calvin W. Hancock",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "icebolt": "./dist/cli/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.ts",
+      "import": "./dist/runtime/index.js"
+    },
+    "./sync": {
+      "types": "./dist/sync/index.d.ts",
+      "import": "./dist/sync/index.js"
+    },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js"
+    },
+    "./auth": {
+      "types": "./dist/auth/index.d.ts",
+      "import": "./dist/auth/index.js"
+    },
+    "./cli": {
+      "types": "./dist/cli/api.d.ts",
+      "import": "./dist/cli/api.js"
+    },
+    "./app": {
+      "types": "./dist/app/index.d.ts",
+      "import": "./dist/app/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "docs"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node test/e2e.mjs && tsc -p test/tsconfig.gen.json && tsc -p test/tsconfig.readme.json"
+  },
+  "peerDependencies": {
+    "sql.js": "^1.11.0"
+  },
+  "peerDependenciesMeta": {
+    "sql.js": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "jsdom": "^24.1.0",
+    "sql.js": "^1.11.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

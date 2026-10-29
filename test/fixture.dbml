@@ -1,0 +1,67 @@
+// Icebolt sample schema — a mod-project tracker.
+Project icebolt_demo {
+  database_type: 'SQLite'
+  Note: 'Demo'
+}
+
+Enum task_status {
+  todo
+  doing
+  done
+}
+
+Table users as U {
+  id integer [pk, increment]
+  email varchar(120) [not null, unique, note: '''@ui:form-input { label: 'Email', type: 'email', placeholder: 'you@example.com' }''']
+  display_name varchar(60)
+  created_at timestamp [not null, default: `now()`]
+}
+
+Table projects {
+  id uuid [pk, default: `gen_random_uuid()`]
+  owner_id integer [not null, ref: > U.id]
+  name varchar(80) [not null, note: '''
+    Human readable name.
+    @ui:form-input { label: 'Project', placeholder: 'e.g. Bronze Age Mod', order: 1 }
+  ''']
+  description text [note: '@ui:form-input { label: "Description", multiline: true, order: 2 }']
+  archived boolean [not null, default: false, note: '@ui:action-button { action: "toggleRow", label: "Archive" }']
+  settings json [default: '{}']
+}
+
+Table tasks {
+  id integer [pk, increment]
+  project_id uuid [not null]
+  title varchar(140) [not null, note: '''@ui:form-input { label: 'Task', placeholder: 'What needs doing?' }''']
+  status task_status [not null, default: 'todo', note: '''
+    @ui:form-input { label: 'Status', optionLabels: { todo: 'To do', doing: 'In progress' } }
+    @ui:action-button { action: 'toggleRow', target: 'status', label: 'Advance' }
+  ''']
+  done boolean [not null, default: false, note: "@ui:action-button { action: 'toggleRow', target: 'done' }"]
+  priority int [not null, default: 0, check: `priority BETWEEN 0 AND 5`, note: '''
+    @ui:form-input { label: 'Priority', min: 0, max: 5 }
+    @ui:action-button { action: 'increment', target: 'priority', label: 'Bump' }
+    @ui:action-button { action: 'deleteRow', confirm: 'Delete task?' }
+  ''']
+  due_on date
+  updated_at datetime [default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (project_id, status) [name: 'ix_tasks_project_status']
+    title
+  }
+}
+
+Table tags {
+  id integer [pk]
+  label varchar(30) [not null, unique]
+}
+
+Table project_settings {
+  project_id uuid [pk]
+  theme varchar(20) [default: 'dark']
+}
+
+Ref: tasks.project_id > projects.id [delete: cascade]
+Ref: project_settings.project_id - projects.id [delete: cascade]
+Ref: tasks.id <> tags.id
