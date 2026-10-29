@@ -1,13 +1,15 @@
 name: Publish to npm
 
 # Push a tag like v1.0.1 (matching package.json "version") to publish.
+# Uses npm Trusted Publishing (no token): set up on npmjs.com under
+# the package's Settings -> Trusted Publisher -> GitHub Actions, workflow publish.yml.
 on:
   push:
     tags: ['v*']
 
 permissions:
   contents: read
-  id-token: write # npm provenance
+  id-token: write # lets npm verify this workflow; also signs provenance
 
 jobs:
   publish:
@@ -19,10 +21,9 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
           cache: npm
+      - run: npm install -g npm@latest # trusted publishing needs npm 11.5.1+
       - run: npm ci
       - run: npm test
       - name: Tag matches package.json version
         run: test "v$(node -p 'require("./package.json").version')" = "$GITHUB_REF_NAME"
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish --access public
