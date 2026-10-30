@@ -207,6 +207,7 @@ class Parser {
       increment: false,
       checks: [],
       inlineRefs: [],
+      ignoredSettings: [],
       line: nameTok.line,
     };
     if (typeParts.length > 1) col.typeSchema = typeParts.slice(0, -1).join('.');
@@ -250,8 +251,14 @@ class Parser {
       case 'ref':
         col.inlineRefs.push(parseInlineRef(s));
         break;
+      case 'delete':
+        col.refOnDelete = refAction(s);
+        break;
+      case 'update':
+        col.refOnUpdate = refAction(s);
+        break;
       default:
-        // Unknown settings (e.g. presentation-only) are ignored on purpose.
+        col.ignoredSettings.push({ key: s.key, line: s.line });
         break;
     }
   }
@@ -382,12 +389,13 @@ class Parser {
       throw new DbmlSyntaxError(`expected relationship operator (>, <, -, <>) but found ${describe(opTok)}`, opTok.line);
     }
     const right = parseEndpoint(this);
-    const ref: DbmlRef = { op: opTok.value as RefOp, left, right, line };
+    const ref: DbmlRef = { op: opTok.value as RefOp, left, right, ignoredSettings: [], line };
     if (name !== undefined) ref.name = name;
     if (this.isPunct('[')) {
       for (const s of this.parseSettings()) {
         if (s.key === 'delete') ref.onDelete = refAction(s);
         else if (s.key === 'update') ref.onUpdate = refAction(s);
+        else if (s.key !== 'color') ref.ignoredSettings.push({ key: s.key, line: s.line }); // color is diagram-only
       }
     }
     return ref;

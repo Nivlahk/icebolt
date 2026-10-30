@@ -1434,4 +1434,91 @@ await test('icebolt init: Vite starter becomes a working Icebolt app, idempotent
   assert.match(msg, /npm create vite@latest/);
 });
 
+const NAME_BOOK = `
+Table circles {
+  id integer [pk, increment]
+  name varchar(60) [not null, unique]
+  created_at timestamp [not null, default: \`now()\`]
+}
+Table people {
+  id integer [pk, increment]
+  name varchar(80) [not null, note: '@ui:form-input { label: "Name" }']
+  circle_id integer [ref: > circles.id, delete: set null, note: '@ui:form-input {}']
+  mentor_id integer [ref: > people.id, note: '@ui:form-input { labelColumn: "name" }']
+}`;
+
+await test('inline ref accepts delete:/update:; unknown settings warn instead of vanishing', () => {
+  const r = compileSchema(NAME_BOOK);
+  assert.match(r.sqlMigration, /FOREIGN KEY \("circle_id"\) REFERENCES "circles" \("id"\) ON DELETE SET NULL/);
+  assert.ok(!r.diagnostics.length, JSON.stringify(r.diagnostics));
+  const w = compileSchema(`Table a { id int [pk]\n b int [ref: > a.id, ondelete: cascade] }\nRef: a.b > a.id [color: #f00, delete: cascade]`);
+  assert.deepEqual(w.diagnostics.map((d) => d.message), ["a.b: unknown setting 'ondelete' ignored"], 'color is diagram-only, no warning');
+  assert.throws(() => compileSchema(`Table a { id int [pk]\n b int [delete: cascade] }`), (e) => e instanceof IceboltCompileError && /need a 'ref:' in the same brackets/.test(e.message));
+  const odd = compileSchema(`Table a { id int [pk]\n b int [ref: > a.id] }\nRef: a.b > a.id [delet: cascade]`);
+  assert.match(odd.diagnostics[0].message, /Ref: unknown setting 'delet' ignored/);
+});
+
+await test('form labels singularize properly: Add person, Add category, Add data', () => {
+  const r = compileSchema(`
+Table people { id int [pk]\n n text [note: '@ui:form-input {}'] }
+Table categories { id int [pk]\n n text [note: '@ui:form-input {}'] }
+Table data { id int [pk]\n n text [note: '@ui:form-input {}'] }
+Table order_items { id int [pk]\n n text [note: '@ui:form-input {}'] }
+Table wolves { id int [pk]\n n text [note: '@ui:form-input {}'] }`);
+  const labels = Object.values(r.uiManifest.tables).map((t) => t.form.submitLabel);
+  assert.deepEqual(labels, ['Add person', 'Add category', 'Add data', 'Add order item', 'Add wolf']);
+});
+
+await test('foreign-key fields render as a dropdown of the other table, kept fresh', async () => {
+  const r = compileSchema(NAME_BOOK);
+  const ui = r.uiManifest.tables.people;
+  const circle = ui.form.fields.find((f) => f.column === 'circle_id');
+  assert.equal(circle.element, 'select');
+  assert.equal(circle.label, 'Circle', '"_id" dropped from the default label');
+  assert.deepEqual(circle.references, { table: 'circles', column: 'id', labelColumn: 'name' });
+  assert.deepEqual(ui.form.fields.find((f) => f.column === 'mentor_id').references, { table: 'people', column: 'id', labelColumn: 'name' });
+  assert.throws(() => compileSchema(NAME_BOOK.replace('labelColumn: "name"', 'labelColumn: "nope"')), /labelColumn: 'people' has no column 'nope'/);
+
+  const nbMeta = Object.fromEntries(r.schema.tables.map((t) => [t.name, { primaryKey: t.primaryKey, columns: Object.fromEntries(t.columns.map((c) => [c.name, { kind: c.kind, nullable: c.nullable, hasDefault: c.hasDefault, generated: c.generated }])) }]));
+  const nbDriver = createSqlJsDriver(new SQL.Database());
+  ensureSchema(nbDriver, { migrationSql: r.sqlMigration, schemaHash: r.schemaHash });
+  const db = new IceboltClient(nbDriver, nbMeta);
+  const dbi = db.tableUnsafe('circles');
+  dbi.insert({ name: 'Ward choir' });
+  dbi.insert({ name: 'Phonetics 101' });
+
+  const { window } = new JSDOM('<!doctype html><body></body>');
+  globalThis.HTMLInputElement = window.HTMLInputElement;
+  globalThis.HTMLSelectElement = window.HTMLSelectElement;
+  const doc = window.document;
+  const { lookupFrom } = await import('../dist/ui/index.js');
+  let submitted;
+  const form = renderForm(ui, { onSubmit: (v) => (submitted = v), lookup: lookupFrom(db), doc });
+  doc.body.append(form);
+  const select = form.querySelector('#icebolt-people-circle_id');
+  assert.deepEqual([...select.options].map((o) => o.textContent), ['—', 'Phonetics 101', 'Ward choir'], 'sorted by label, blank first because nullable');
+  dbi.insert({ name: 'Archery' });
+  select.value = '1';
+  select.dispatchEvent(new window.Event('focus'));
+  assert.deepEqual([...select.options].map((o) => o.textContent), ['—', 'Archery', 'Phonetics 101', 'Ward choir'], 'refreshed when opened');
+  assert.equal(select.value, '1', 'selection kept across refresh');
+  form.querySelector('#icebolt-people-name').value = 'Aoife';
+  form.dispatchEvent(new window.Event('submit', { cancelable: true }));
+  await new Promise((res) => setTimeout(res, 0));
+  assert.deepEqual(submitted, { name: 'Aoife', circle_id: 1, mentor_id: null });
+
+  const { refreshLookups } = await import('../dist/ui/index.js');
+  dbi.insert({ name: 'Band' });
+  refreshLookups(form);
+  assert.deepEqual([...select.options].map((o) => o.textContent), ['—', 'Archery', 'Band', 'Phonetics 101', 'Ward choir'], 'refreshLookups re-reads options');
+
+  const bare = renderForm(ui, { onSubmit() {}, doc });
+  assert.equal(bare.querySelector('#icebolt-people-circle_id').type, 'number', 'no lookup: falls back to a number box');
+
+  const required = compileSchema(NAME_BOOK.replace('circle_id integer [ref', 'circle_id integer [not null, ref').replace('delete: set null', 'delete: cascade'));
+  const req = renderForm(required.uiManifest.tables.people, { onSubmit() {}, lookup: () => [], doc }).querySelector('#icebolt-people-circle_id');
+  assert.equal(req.options[0].textContent, 'Nothing to choose yet');
+  assert.ok(req.options[0].disabled && req.required);
+});
+
 console.log(`\n${passed} tests passed.`);

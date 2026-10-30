@@ -37,6 +37,11 @@ export interface DbmlColumn {
   note?: string;
   checks: string[];
   inlineRefs: DbmlInlineRef[];
+  /** `delete:` / `update:` written next to an inline `ref:` (an Icebolt convenience; plain DBML only allows them on `Ref:` lines). */
+  refOnDelete?: DbmlReferentialAction;
+  refOnUpdate?: DbmlReferentialAction;
+  /** Settings the compiler does not understand, reported as warnings instead of silently dropped. */
+  ignoredSettings: Array<{ key: string; line: number }>;
   line: number;
 }
 
@@ -79,6 +84,7 @@ export interface DbmlRef {
   right: DbmlEndpoint;
   onDelete?: DbmlReferentialAction;
   onUpdate?: DbmlReferentialAction;
+  ignoredSettings: Array<{ key: string; line: number }>;
   line: number;
 }
 

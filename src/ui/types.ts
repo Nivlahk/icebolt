@@ -21,6 +21,16 @@ export interface UiSelectOption {
   label: string;
 }
 
+/** A foreign-key field: its options are rows of another table, looked up when the form is shown. */
+export interface UiReference {
+  /** Referenced table. */
+  table: string;
+  /** Referenced column (the stored value). */
+  column: string;
+  /** Column shown to the user for each option. */
+  labelColumn: string;
+}
+
 /** One HTML form control bound to one database column. */
 export interface UiFormFieldConfig {
   /** Database column this control reads/writes. */
@@ -40,6 +50,8 @@ export interface UiFormFieldConfig {
   nullable: boolean;
   kind: ValueKind;
   options: UiSelectOption[] | null;
+  /** Set for foreign-key columns: a <select> of rows from another table. */
+  references: UiReference | null;
   /** Extra whitelisted HTML attributes (maxlength, min, max, step, pattern, autocomplete). */
   attributes: Record<string, string>;
   order: number;

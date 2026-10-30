@@ -40,7 +40,8 @@ Ref: tasks.id <> tags.id   // many-to-many: a junction table is generated
 ```
 
 - Tables are SQLite `STRICT`. `boolean`, enums, `json` and `varchar(n)` become CHECK constraints, so bad data is rejected by the database itself.
-- Every foreign key gets an index. `ref` settings `delete: cascade` and `update: ...` are honored.
+- Every foreign key gets an index. `delete:` and `update:` (`cascade`, `set null`, `restrict`, `set default`, `no action`) work on `Ref:` lines and, as an Icebolt convenience, next to an inline ref: `circle_id integer [ref: > circles.id, delete: set null]`.
+- Settings Icebolt doesn't understand are compile warnings, never silently dropped.
 - `now()` defaults use SQLite's UTC timestamp.
 - Errors and warnings come with line and column numbers; the compile fails on any error.
 
@@ -58,7 +59,9 @@ Table tasks {
 }
 ```
 
-`@ui:form-input` keys: `label, placeholder, type, multiline, required, order, help, min, max, step, pattern, maxLength, autocomplete, optionLabels`. The input type, required flag, length and options come from the column automatically; set keys only to override.
+`@ui:form-input` keys: `label, placeholder, type, multiline, required, order, help, min, max, step, pattern, maxLength, autocomplete, optionLabels, labelColumn`. The input type, required flag, length and options come from the column automatically; set keys only to override.
+
+**Foreign keys become dropdowns.** A form field on a column that references another table lists that table's rows, labelled by its first unique text column (else its first text column); `labelColumn: 'title'` picks a different one. `circle_id` is labelled “Circle” by default. `renderForm` needs a `lookup` to read the rows (below).
 
 `@ui:action-button` actions: `toggleRow` (flip a boolean, cycle an enum, or step through `values: [...]`), `setValue` (`value`), `increment` / `decrement` (`by`), `deleteRow`. Shared keys: `target` (defaults to the annotated column), `label`, `confirm`, `variant`.
 
@@ -67,14 +70,19 @@ Props are read by a strict literal parser; nothing is evaluated. Bad targets, un
 Render them:
 
 ```ts
-import { renderForm, renderActionButtons } from 'nivlahkicebolt/ui';
+import { lookupFrom, renderForm, renderActionButtons } from 'nivlahkicebolt/ui';
 import { executeAction } from 'nivlahkicebolt/runtime';
 import { UI_MANIFEST } from './db/icebolt-client';
 
 const ui = UI_MANIFEST.tables['tasks']!;
-const form = renderForm(ui, { onSubmit: (values) => { db.tableUnsafe('tasks').insert(values); } });
+const form = renderForm(ui, {
+  onSubmit: (values) => { db.tableUnsafe('tasks').insert(values); },
+  lookup: (ref) => (db ? lookupFrom(db)(ref) : []), // fills foreign-key dropdowns
+});
 const buttons = renderActionButtons(ui, row, { onAction: (action, r) => { executeAction(db, action, r, ui.primaryKey); } });
 ```
+
+Dropdowns re-read their options whenever the user opens them. If your code sets a dropdown to a row it just added, call `refreshLookups(form)` first. The submit button says “Add task”, “Add person”, “Add category”: the table name, singular.
 
 Everything is built with `createElement` and `textContent`, never `innerHTML`, so text from the schema can't inject markup. Elements carry `icebolt-*` classes for styling.
 

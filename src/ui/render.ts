@@ -2,7 +2,25 @@
  * DOM construction from a UI manifest. Uses createElement/textContent only —
  * no innerHTML — so labels and placeholders authored in DBML cannot inject markup.
  */
-import type { UiActionButtonConfig, UiFormFieldConfig, UiTableManifest } from './types.js';
+import type { UiActionButtonConfig, UiFormFieldConfig, UiReference, UiSelectOption, UiTableManifest } from './types.js';
+
+/** Supplies the options for a foreign-key field: the current rows of the referenced table. */
+export type ReferenceLookup = (ref: UiReference) => UiSelectOption[];
+
+/** Anything with `tableUnsafe`, such as the generated Icebolt client. */
+export interface LookupSource {
+  tableUnsafe(name: string): { orderBy(column: string): { select(): Array<Record<string, unknown>> } };
+}
+
+/** Foreign-key options straight from an Icebolt client, sorted by their label. */
+export function lookupFrom(client: LookupSource): ReferenceLookup {
+  return (ref) =>
+    client
+      .tableUnsafe(ref.table)
+      .orderBy(ref.labelColumn)
+      .select()
+      .map((row) => ({ value: String(row[ref.column]), label: String(row[ref.labelColumn] ?? row[ref.column]) }));
+}
 
 export type FormValues = Record<string, unknown>;
 
@@ -13,6 +31,13 @@ export interface RenderFormOptions {
   /** Called with submit errors (validation from the client, constraint failures). */
   onError?: (error: unknown, form: HTMLFormElement) => void;
   resetOnSuccess?: boolean;
+  /**
+   * Options for foreign-key fields, e.g. `lookupFrom(db)`. Called when the form is built and
+   * again whenever such a field is about to open, so new rows show up. If the database can
+   * change, close over it: `lookup: (ref) => (db ? lookupFrom(db)(ref) : [])`.
+   * Without it, a foreign-key field falls back to a number box.
+   */
+  lookup?: ReferenceLookup;
   doc?: Document;
 }
 
@@ -23,21 +48,64 @@ export interface RenderActionsOptions {
   doc?: Document;
 }
 
-function controlFor(doc: Document, field: UiFormFieldConfig): HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement {
+const REFRESH_EVENT = 'icebolt:refresh-options';
+
+/**
+ * Re-read the options of every foreign-key dropdown in a form. Dropdowns already refresh
+ * when the user opens them; call this after changing the referenced tables if you also
+ * set their values from code (e.g. preselecting a row that was just added).
+ */
+export function refreshLookups(form: HTMLFormElement): void {
+  for (const select of form.querySelectorAll('select')) select.dispatchEvent(new (form.ownerDocument.defaultView ?? window).Event(REFRESH_EVENT));
+}
+
+function fillSelect(doc: Document, select: HTMLSelectElement, field: UiFormFieldConfig, options: readonly UiSelectOption[]): void {
+  const keep = select.value;
+  const kids: HTMLOptionElement[] = [];
+  if (field.nullable || !field.required) {
+    const blank = doc.createElement('option');
+    blank.value = '';
+    blank.textContent = '—';
+    kids.push(blank);
+  } else if (field.references) {
+    const prompt = doc.createElement('option');
+    prompt.value = '';
+    prompt.textContent = options.length ? 'Choose…' : 'Nothing to choose yet';
+    prompt.disabled = true;
+    kids.push(prompt);
+  }
+  for (const opt of options) {
+    const o = doc.createElement('option');
+    o.value = opt.value;
+    o.textContent = opt.label;
+    kids.push(o);
+  }
+  select.replaceChildren(...kids);
+  if (kids.some((o) => o.value === keep)) select.value = keep;
+  else if (field.references && field.required) select.value = '';
+}
+
+function controlFor(doc: Document, field: UiFormFieldConfig, lookup: ReferenceLookup | null): HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement {
   let el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-  if (field.element === 'select') {
+  const ref = field.references;
+  if (field.element === 'select' && ref && !lookup) {
+    const input = doc.createElement('input');
+    input.type = 'number';
+    input.step = '1';
+    el = input;
+  } else if (field.element === 'select') {
     const select = doc.createElement('select');
-    if (field.nullable || !field.required) {
-      const blank = doc.createElement('option');
-      blank.value = '';
-      blank.textContent = '—';
-      select.append(blank);
-    }
-    for (const opt of field.options ?? []) {
-      const o = doc.createElement('option');
-      o.value = opt.value;
-      o.textContent = opt.label;
-      select.append(o);
+    if (ref && lookup) {
+      const refresh = (): void => fillSelect(doc, select, field, lookup(ref));
+      refresh();
+      select.addEventListener(REFRESH_EVENT, refresh);
+      select.addEventListener('pointerdown', refresh);
+      select.addEventListener('focus', refresh);
+      select.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === ' ' || e.key === 'Enter') refresh();
+      });
+    } else {
+      fillSelect(doc, select, field, field.options ?? []);
     }
     el = select;
   } else if (field.element === 'textarea') {
@@ -110,6 +178,7 @@ export function renderForm(table: UiTableManifest, options: RenderFormOptions): 
   form.className = 'icebolt-form';
   form.noValidate = false;
 
+  const lookup = options.lookup ?? null;
   const controls: Array<{ field: UiFormFieldConfig; el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement }> = [];
   for (const field of config.fields) {
     const wrapper = doc.createElement('div');
@@ -117,7 +186,7 @@ export function renderForm(table: UiTableManifest, options: RenderFormOptions): 
     const label = doc.createElement('label');
     label.htmlFor = field.id;
     label.textContent = field.label;
-    const el = controlFor(doc, field);
+    const el = controlFor(doc, field, lookup);
     setValue(el, field, options.initialValues?.[field.column]);
     if (field.inputType === 'checkbox') wrapper.append(el, label);
     else wrapper.append(label, el);

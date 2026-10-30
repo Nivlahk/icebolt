@@ -104,7 +104,7 @@ declare module 'sql.js' {
 `;
 
 function demoTemplate(appName: string, hasStyle: boolean): string {
-  return `${hasStyle ? "import './style.css';\n" : ''}import { renderActionButtons, renderForm } from 'nivlahkicebolt/ui';
+  return `${hasStyle ? "import './style.css';\n" : ''}import { lookupFrom, refreshLookups, renderActionButtons, renderForm } from 'nivlahkicebolt/ui';
 import { executeAction } from 'nivlahkicebolt/runtime';
 import { UI_MANIFEST } from './db/icebolt-client';
 import { startIcebolt, type AppDb } from './icebolt';
@@ -126,11 +126,13 @@ const form = renderForm(ui, {
     db?.tableUnsafe('notes').insert(values);
   },
   onError: (err) => alert(err instanceof Error ? err.message : String(err)),
+  lookup: (ref) => (db ? lookupFrom(db)(ref) : []), // fills dropdowns for columns that reference another table
 })!;
 root.replaceChildren(header, form, list);
 
 function render(): void {
   if (!db) return;
+  refreshLookups(form);
   const notes = db.table('notes').orderBy('created_at', 'desc').select();
   list.replaceChildren(
     ...notes.map((note) => {

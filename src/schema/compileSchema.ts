@@ -393,10 +393,22 @@ function resolveSchema(doc: DbmlDocument, diagnostics: Diagnostic[]): CompiledSc
   const pending: PendingRef[] = [];
   for (const entry of entries) {
     for (const c of entry.dbml.columns) {
-      for (const r of c.inlineRefs) pending.push({ op: r.op, left: { entry, columns: [c.name] }, right: r.target, line: c.line });
+      for (const ig of c.ignoredSettings) {
+        report({ severity: 'warning', message: `${entry.compiled.name}.${c.name}: unknown setting '${ig.key}' ignored`, line: ig.line });
+      }
+      if ((c.refOnDelete || c.refOnUpdate) && c.inlineRefs.length === 0) {
+        report({ message: `${entry.compiled.name}.${c.name}: 'delete:' and 'update:' need a 'ref:' in the same brackets`, line: c.line });
+      }
+      for (const r of c.inlineRefs) {
+        const p: PendingRef = { op: r.op, left: { entry, columns: [c.name] }, right: r.target, line: c.line };
+        if (c.refOnDelete) p.onDelete = c.refOnDelete;
+        if (c.refOnUpdate) p.onUpdate = c.refOnUpdate;
+        pending.push(p);
+      }
     }
   }
   for (const r of doc.refs) {
+    for (const ig of r.ignoredSettings) report({ severity: 'warning', message: `Ref: unknown setting '${ig.key}' ignored`, line: ig.line });
     const leftEntry = resolveEndpoint(r.left);
     if (!leftEntry) continue;
     const p: PendingRef = { op: r.op, left: { entry: leftEntry, columns: r.left.columns }, right: r.right, line: r.line };

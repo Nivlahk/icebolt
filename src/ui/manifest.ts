@@ -8,6 +8,7 @@ import type {
   UiInputType,
   UiManifest,
   UiPrimitive,
+  UiReference,
   UiSelectOption,
   UiTableManifest,
 } from './types.js';
@@ -31,6 +32,7 @@ const INPUT_TYPES: ReadonlySet<string> = new Set<UiInputType>([
 
 const FORM_INPUT_KEYS: ReadonlySet<string> = new Set([
   'label',
+  'labelColumn',
   'placeholder',
   'type',
   'multiline',
@@ -159,7 +161,27 @@ function inferControl(column: CompiledColumn): { element: UiFormFieldConfig['ele
   }
 }
 
-function buildFormField(table: CompiledTable, column: CompiledColumn, props: UiProps, report: Report): UiFormFieldConfig | null {
+/** The referenced row's column to show in a foreign-key <select>: a unique text column, else any text column, else the key. */
+function resolveReference(schema: CompiledSchema, table: CompiledTable, column: CompiledColumn, props: UiProps, report: Report): UiReference | null {
+  const fk = table.foreignKeys.find((f) => f.columns.length === 1 && f.columns[0] === column.name);
+  if (!fk) {
+    if (props['labelColumn'] !== undefined) report('warning', `'labelColumn' ignored: '${column.name}' is not a foreign key`);
+    return null;
+  }
+  const target = schema.tables.find((t) => t.name === fk.refTable);
+  const refColumn = fk.refColumns[0]!;
+  if (!target) return null;
+  const explicit = optString(props, 'labelColumn', report);
+  if (explicit !== null) {
+    if (target.columns.some((c) => c.name === explicit)) return { table: target.name, column: refColumn, labelColumn: explicit };
+    report('error', `labelColumn: '${target.name}' has no column '${explicit}'`);
+  }
+  const texts = target.columns.filter((c) => c.kind === 'text' && !c.primaryKey);
+  const label = texts.find((c) => c.unique) ?? texts.find((c) => !c.nullable) ?? texts[0];
+  return { table: target.name, column: refColumn, labelColumn: label?.name ?? refColumn };
+}
+
+function buildFormField(schema: CompiledSchema, table: CompiledTable, column: CompiledColumn, props: UiProps, report: Report): UiFormFieldConfig | null {
   warnUnknownKeys(props, FORM_INPUT_KEYS, 'form-input', report);
   if (column.kind === 'blob') {
     report('error', '@ui:form-input is not supported on blob columns');
@@ -170,6 +192,11 @@ function buildFormField(table: CompiledTable, column: CompiledColumn, props: UiP
   }
 
   let { element, inputType } = inferControl(column);
+  const references = resolveReference(schema, table, column, props, report);
+  if (references) {
+    element = 'select';
+    inputType = null;
+  }
 
   const explicitType = optString(props, 'type', report);
   if (explicitType !== null) {
@@ -228,7 +255,7 @@ function buildFormField(table: CompiledTable, column: CompiledColumn, props: UiP
   if (autocomplete !== null) attributes['autocomplete'] = autocomplete;
 
   let options: UiSelectOption[] | null = null;
-  if (element === 'select') {
+  if (element === 'select' && !references) {
     const labelsRaw = props['optionLabels'];
     const labels: Record<string, string> = {};
     if (labelsRaw !== undefined) {
@@ -253,13 +280,14 @@ function buildFormField(table: CompiledTable, column: CompiledColumn, props: UiP
     name: column.name,
     element,
     inputType: element === 'input' ? inputType : null,
-    label: optString(props, 'label', report) ?? humanize(column.name),
+    label: optString(props, 'label', report) ?? humanize(references ? column.name.replace(/_?id$/i, '') || column.name : column.name),
     placeholder: element === 'select' || inputType === 'checkbox' ? null : optString(props, 'placeholder', report),
     description: optString(props, 'help', report),
     required,
     nullable: column.nullable,
     kind: column.kind,
     options,
+    references,
     attributes,
     order: optNumber(props, 'order', report) ?? column.ordinal,
   };
@@ -410,7 +438,7 @@ export function buildUiManifest(schema: CompiledSchema, schemaHash: string, diag
             report('error', `duplicate @ui:form-input for column '${column.name}'`);
             continue;
           }
-          const field = buildFormField(table, column, d.props, report);
+          const field = buildFormField(schema, table, column, d.props, report);
           if (field) fields.push(field);
         } else if (d.name === 'action-button') {
           const btn = buildAction(table, column, d.props, actions.length, report);
@@ -436,11 +464,25 @@ export function buildUiManifest(schema: CompiledSchema, schemaHash: string, diag
   return { version: 1, schemaHash, tables };
 }
 
-/** "notes" → "note", "categories" → "category", "boxes" → "box"; leaves "status", "news" alone. */
-function singular(word: string): string {
-  if (/ies$/.test(word)) return `${word.slice(0, -3)}y`;
-  if (/(ss|us|is|news)$/.test(word)) return word;
-  if (/(x|ch|sh|ss)es$/.test(word)) return word.slice(0, -2);
-  if (/s$/.test(word)) return word.slice(0, -1);
-  return word;
+const IRREGULAR_PLURALS: Readonly<Record<string, string>> = {
+  people: 'person', children: 'child', men: 'man', women: 'woman', mice: 'mouse', geese: 'goose',
+  teeth: 'tooth', feet: 'foot', knives: 'knife', wives: 'wife', lives: 'life', leaves: 'leaf',
+  wolves: 'wolf', shelves: 'shelf', halves: 'half', calves: 'calf', elves: 'elf', selves: 'self', criteria: 'criterion', phenomena: 'phenomenon', indices: 'index', matrices: 'matrix',
+};
+const UNCOUNTABLE = new Set(['data', 'news', 'series', 'species', 'information', 'equipment', 'sheep', 'fish', 'media', 'settings']);
+
+/** Singular of the last word: "notes" → "note", "order items" → "order item", "people" → "person", "data" stays. */
+export function singular(phrase: string): string {
+  const m = /^(.*?)([a-z]+)$/i.exec(phrase);
+  if (!m) return phrase;
+  const [, head, word] = m as unknown as [string, string, string];
+  const lower = word.toLowerCase();
+  let out: string;
+  if (IRREGULAR_PLURALS[lower]) out = IRREGULAR_PLURALS[lower]!;
+  else if (UNCOUNTABLE.has(lower) || /(ss|us|is)$/.test(lower)) out = lower;
+  else if (/[^aeiou]ies$/.test(lower)) out = `${lower.slice(0, -3)}y`;
+  else if (/(x|ch|sh|ss|zz)es$/.test(lower)) out = lower.slice(0, -2);
+  else if (/s$/.test(lower)) out = lower.slice(0, -1);
+  else out = lower;
+  return head + (word === lower ? out : out.charAt(0).toUpperCase() + out.slice(1));
 }
