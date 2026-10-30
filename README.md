@@ -1,5 +1,9 @@
 # Icebolt
 
+[![npm](https://img.shields.io/npm/v/nivlahkicebolt)](https://www.npmjs.com/package/nivlahkicebolt)
+[![CI](https://github.com/Nivlahk/icebolt/actions/workflows/ci.yml/badge.svg)](https://github.com/Nivlahk/icebolt/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 **Let your users own their data.** Icebolt gives a web app a real SQLite database that lives in each user's own Google Drive, in a folder named after your app, optionally encrypted with a passphrase only they know. There is no backend to run, and you, the developer, never receive anyone's data.
 
 You describe your data once in [DBML](https://dbml.dbdiagram.io/docs/); Icebolt compiles it into:
@@ -8,7 +12,7 @@ You describe your data once in [DBML](https://dbml.dbdiagram.io/docs/); Icebolt 
 - a **typed client**: `db.table('notes').insert({ title: 'Hi' })`, with `isDirty` change tracking;
 - **forms and buttons** from `@ui:` notes on your columns;
 - **automatic upgrades** of users' saved data when you change the schema;
-- **Google Drive sync**: Connect button, passphrase prompts, a Save status and a Storage menu, all built in.
+- **Google Drive sync**: Connect button, passphrase prompts, a save status and a Storage menu, all built in.
 
 ## Quick start
 
@@ -21,22 +25,25 @@ npx icebolt setup google
 npm run dev
 ```
 
-> Not on npm yet? Install straight from GitHub instead: `npm install github:Nivlahk/icebolt sql.js` (it builds itself on install).
-
-What each step does:
+The package is called `nivlahkicebolt`; the command it installs is `icebolt`.
 
 | Command | Result |
 |---|---|
 | `npx icebolt init` | Adds `schema.dbml` (a starter notes table), compiles it to `src/db/`, hooks the compile into `npm run dev` and `npm run build`, and writes `src/icebolt.ts` (sign-in, storage choice, sync). In a fresh Vite starter it also replaces the counter demo with a working notes app. It never overwrites files you have changed. |
-| `npx icebolt setup google` | The one-time Google registration every app needs so users can sign in. It creates the Cloud project (with `gcloud`), generates a privacy policy and terms page, opens each Google console page in order and copies each value for you, then writes the client ID to `.env.local`. [Details](docs/google-setup.md) |
+| `npx icebolt setup google` | The one-time Google registration every app needs so users can sign in. It creates the Cloud project (with `gcloud`), generates a privacy policy and terms page, opens each Google console page in order and copies each value for you, then writes the client ID to `.env.local`. You can skip it at first: the app runs locally and says Drive saving isn't set up yet. [Details](docs/google-setup.md) |
 | `npm run dev` | Your app works immediately with a local database. **Connect Google Drive** saves it to the user's Drive. |
 
-Then make it yours: edit `schema.dbml` and render from the database in `src/main.ts`:
+### Make it yours
+
+Edit `schema.dbml`; the next `npm run dev` recompiles it. Then render from the database. `startIcebolt` takes the element where the Connect / Storage controls go, and a function that receives the database:
 
 ```ts
 import { startIcebolt } from './icebolt';
 
-startIcebolt(document.querySelector('#controls')!, (db) => {
+const controls = document.createElement('div');
+document.body.prepend(controls);
+
+startIcebolt(controls, (db) => {
   const draw = () => {
     const notes = db.table('notes').where({ done: false }).orderBy('created_at', 'desc').select();
     // ...render notes
@@ -46,7 +53,7 @@ startIcebolt(document.querySelector('#controls')!, (db) => {
 });
 ```
 
-`onReady` runs again whenever the active database changes (after connecting or disconnecting), so always render from the `db` it gives you.
+That function runs again whenever the active database changes (after connecting or disconnecting), so always render from the `db` it gives you. The demo `src/main.ts` written by `icebolt init` is a complete example.
 
 ## What your users get
 
@@ -83,7 +90,7 @@ icebolt --help                     All options
 | `nivlahkicebolt/auth` | Google sign-in (browser token flow, no server) |
 | `nivlahkicebolt/cli` | `init`, `compileProject`, `setupGoogle` as functions |
 
-## Developing Icebolt
+## Contributing
 
 ```bash
 git clone https://github.com/Nivlahk/icebolt.git
@@ -92,7 +99,18 @@ npm install
 npm test
 ```
 
-`npm test` builds with strict TypeScript, runs the end-to-end suite (real SQLite through sql.js, a mocked Drive API, jsdom, the CLI against temp projects), and type-checks generated code. Releases publish to npm from GitHub Actions when a `v*` tag is pushed.
+`npm test` builds with strict TypeScript, runs the end-to-end suite (real SQLite through sql.js, a mocked Drive API, jsdom, the CLI against temp projects), and type-checks generated code. CI runs it on every push and pull request.
+
+To try unreleased changes in an app: `npm install github:Nivlahk/icebolt` (it builds itself on install).
+
+## Releasing
+
+Releases are published from GitHub Actions with npm [trusted publishing](https://docs.npmjs.com/trusted-publishers), so there is no npm token to manage, and every version carries a provenance link back to the commit it was built from.
+
+```bash
+npm version patch        # or minor / major: bumps package.json, commits, tags
+git push --follow-tags   # the tag runs tests and publishes
+```
 
 ## License
 
